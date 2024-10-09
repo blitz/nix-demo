@@ -1,0 +1,13 @@
+diff --git a/hello/src/hello.c b/hello/src/hello.c
+index c45ca37..6e589b9 100644
+--- a/hello.c
++++ b/hello.c
+@@ -15,7 +15,7 @@ int main()
+     return EXIT_FAILURE;
+   }
+   
+-  printf("Hello from %s with OpenSSL version %s and %s %s.\n",
++  printf("BONJOUR from %s with OpenSSL version %s and %s %s.\n",
+ 	 utsname.machine,
+ 	 OPENSSL_VERSION_TEXT,
+ #ifdef __clang__

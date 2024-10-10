@@ -20,8 +20,9 @@
       selfPkgs = self.packages.x86_64-linux;
     in
     {
-
       # Basic packaging
+      #
+      # See: hello/default.nix
       packages.x86_64-linux.hello = pkgs.callPackage ./hello { };
 
       # Cross-compilation
@@ -31,17 +32,20 @@
       # Cross-compiling works for (almost) everything in nixpkgs.
       packages.riscv64-linux.openssl = riscvPkgs.openssl;
 
-      # Shell environments
+      # Package your build and development environment with shell
+      # environments.
       devShells.x86_64-linux.default = pkgs.mkShell {
+        # Get all tools to build the software.
+        inputsFrom = [ selfPkgs.hello ];
 
-        # Get a cross-compilation environment.
-        inputsFrom = [ self.packages.riscv64-linux.hello ];
-
-        # Get the tools to run the resulting binary.
-        packages = [ pkgs.qemu-user ];
+        # Common developer tools.
+        packages = [
+          pkgs.qemu-user
+          pkgs.clang-tools
+        ];
       };
 
-      # Overrides
+      # Packages can be massaged via overrides.
       packages.x86_64-linux.helloClang = selfPkgs.hello.override {
         # Build with clang.
         stdenv = pkgs.clangStdenv;
@@ -57,7 +61,7 @@
         ];
       };
 
-      # We can also patch other software.
+      # We can massage everything from nixpkgs as well.
       packages.x86_64-linux.patchedOpenssl = pkgs.openssl.overrideAttrs (old: {
         patches = old.patches ++ [
           (pkgs.fetchpatch {
@@ -73,8 +77,6 @@
         openssl = selfPkgs.patchedOpenssl;
       };
 
-      # NixOS modules
-      #
       # Let's move on to building NixOS systems. The main building
       # blocks are NixOS modules.
       modules.default = { config, lib, ... }:
@@ -137,11 +139,10 @@
         '';
       };
 
-      # Interactive debugging of tests
-      #
+      # Tests ca be interactively debugged:
       # nix -L build .#checks.x86_64-linux.default.driverInteractive
 
-      # NixOS Overlay
+      # To patch software globally in a NixOS system, we use overlays.
       checks.x86_64-linux.patched-openssl = pkgs.nixosTest {
         name = "Test whether modified kernel boots";
 
@@ -163,7 +164,8 @@
         '';
       };
 
-      # NixOS Kernel Customization
+      # For example for embedded systems, it's useful to tweak and
+      # patch the Linux kernel.
       checks.x86_64-linux.custom-kernel = pkgs.nixosTest {
         name = "Test whether modified kernel boots";
 
@@ -195,11 +197,15 @@
         '';
       };
 
-      # NixOS images
+      # We can introspect NixOS configurations without building everything.
+      #
+      # nix -L build .#checks.x86_64-linux.custom-kernel.config.nodes.machine.boot.kernelPackages.kernel.configfile
+
+      # There is a lot of tooling to build immutable and image-based systems.
       #
       # See: https://github.com/blitz/sysupdate-playground
 
-      # CI
+      # There are convenient options to build CIs.
       #
       # See: https://hercules-ci.com/github/blitz/nix-demo
     };

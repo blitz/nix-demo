@@ -28,8 +28,8 @@
       packages.aarch64-linux.hello = aarch64Pkgs.callPackage ./hello { };
       packages.riscv64-linux.hello = riscvPkgs.callPackage ./hello { };
 
-      # Also of complicated packages.
-      packages.riscv64-linux.chromium = riscvPkgs.chromium;
+      # Cross-compiling works for (almost) everything in nixpkgs.
+      packages.riscv64-linux.openssl = riscvPkgs.openssl;
 
       # Shell environments
       devShells.x86_64-linux.default = pkgs.mkShell {

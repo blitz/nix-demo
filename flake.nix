@@ -9,10 +9,15 @@
 
   outputs = { self, nixpkgs }:
     let
+      # The native x86_64-linux environment.
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
 
+      # Cross-compilation environments.
       aarch64Pkgs = pkgs.pkgsCross.aarch64-multiplatform;
       riscvPkgs = pkgs.pkgsCross.riscv64;
+
+      # A useful shorthand for later.
+      selfPkgs = self.packages.x86_64-linux;
     in
     {
 
@@ -22,6 +27,9 @@
       # Cross-compilation
       packages.aarch64-linux.hello = aarch64Pkgs.callPackage ./hello { };
       packages.riscv64-linux.hello = riscvPkgs.callPackage ./hello { };
+
+      # Also of complicated packages.
+      packages.riscv64-linux.chromium = riscvPkgs.chromium;
 
       # Shell environments
       devShells.x86_64-linux.default = pkgs.mkShell {
@@ -34,7 +42,7 @@
       };
 
       # Overrides
-      packages.x86_64-linux.helloClang = self.packages.x86_64-linux.hello.override {
+      packages.x86_64-linux.helloClang = selfPkgs.hello.override {
         # Build with clang.
         stdenv = pkgs.clangStdenv;
 
@@ -42,48 +50,68 @@
         openssl = pkgs.openssl_3_3;
       };
 
-      # Patch packages. Can also be used to patch dependencies of packages (not global!).
-      packages.x86_64-linux.helloPatched = self.packages.x86_64-linux.hello.overrideAttrs {
+      # Let's patch packages.
+      packages.x86_64-linux.helloPatched = selfPkgs.hello.overrideAttrs {
         patches = [
           ./hello/example.patch
         ];
       };
 
+      # We can also patch other software.
+      packages.x86_64-linux.patchedOpenssl = pkgs.openssl.overrideAttrs (old: {
+        patches = old.patches ++ [
+          (pkgs.fetchpatch {
+            name = "improve-aes-xts-perf.patch";
+            url = "https://github.com/openssl/openssl/commit/858dfdfc67ea50fbe9ba38250daf306d5d0370a3.patch";
+            hash = "sha256-bXEBiaS4EoeRTX+2yZ1CS/NzGHHIe4SFXGVaa6KL38E=";
+          })
+        ];
+      });
+
+      # And then use it as dependency.
+      packages.x86_64-linux.helloPatchedOpenssl = selfPkgs.hello.override {
+        openssl = selfPkgs.patchedOpenssl;
+      };
+
       # NixOS modules
-      modules.default = { config, pkgs, lib, ... }:
+      #
+      # Let's move on to building NixOS systems. The main building
+      # blocks are NixOS modules.
+      modules.default = { config, lib, ... }:
         with lib;
         let
           cfg = config.services.hello;
         in
         {
+          # Define a set of configuration options for this module.
           options.services.hello = {
             enable = mkEnableOption "Hello Module";
 
             # Allow the user to config
             package = mkOption {
               type = types.package;
-              default = self.packages.x86_64-linux.hello;
-              description = "What ";
+              default = selfPkgs.hello;
+              description = "Set the package that should be used";
             };
 
             harden = mkEnableOption "hardening for the systemd service";
           };
 
+          # This is the configuration fragment that this module adds
+          # to a NixOS configuration.
           config = mkIf cfg.enable {
             # Deploy a systemd service.
             systemd.services.hello = {
               wantedBy = [ "multi-user.target" ];
 
-              serviceConfig.ExecStart = lib.getExe cfg.package;
+              serviceConfig = {
+                ExecStart = lib.getExe cfg.package;
+                RemainAfterExit = true;
+              };
 
               # Use config options to configure everything.
               confinement.enable = cfg.harden;
             };
-
-            # Expose the program in PATH.
-            environment.systemPackages = [
-              cfg.package
-            ];
           };
         };
 
@@ -109,6 +137,10 @@
         '';
       };
 
+      # Interactive debugging of tests
+      #
+      # nix -L build .#checks.x86_64-linux.default.driverInteractive
+
       # NixOS Overlay
       checks.x86_64-linux.patched-openssl = pkgs.nixosTest {
         name = "Test whether modified kernel boots";
@@ -118,15 +150,7 @@
           # Patch OpenSSL system-wide.
           nixpkgs.overlays = [
             (final: prev: {
-              openssl = prev.openssl.overrideAttrs (old: {
-                patches = old.patches ++ [
-                  (pkgs.fetchpatch {
-                    name = "improve-aes-xts-perf.patch";
-                    url = "https://github.com/openssl/openssl/commit/858dfdfc67ea50fbe9ba38250daf306d5d0370a3.patch";
-                    hash = "sha256-bXEBiaS4EoeRTX+2yZ1CS/NzGHHIe4SFXGVaa6KL38E=";
-                  })
-                ];
-              });
+              openssl = selfPkgs.patchedOpenssl;
             })
           ];
         };
@@ -152,7 +176,6 @@
               name = "Enable hardening";
 
               # We could apply patches here as well.
-              #
               patch = null;
 
               extraStructuredConfig = {
@@ -174,6 +197,10 @@
 
       # NixOS images
       #
-      # See sysupdate-playground.
+      # See: https://github.com/blitz/sysupdate-playground
+
+      # CI
+      #
+      # See: https://hercules-ci.com/github/blitz/nix-demo
     };
 }

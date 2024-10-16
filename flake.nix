@@ -12,6 +12,9 @@
       # The native x86_64-linux environment.
       pkgs = nixpkgs.legacyPackages.x86_64-linux;
 
+      # Library functions.
+      lib = nixpkgs.lib;
+
       # Cross-compilation environments.
       aarch64Pkgs = pkgs.pkgsCross.aarch64-multiplatform;
       riscvPkgs = pkgs.pkgsCross.riscv64;
@@ -76,6 +79,40 @@
       packages.x86_64-linux.helloPatchedOpenssl = selfPkgs.hello.override {
         openssl = selfPkgs.patchedOpenssl;
       };
+
+      # What about Python?
+      packages.x86_64-linux.helloPython = pkgs.python313Packages.callPackage ./python {};
+
+      # We can use different Python versions as well.
+      packages.x86_64-linux.helloPython36 = pkgs.python39Packages.callPackage selfPkgs.helloPython.override {};
+      # What about quick'n'dirty shell scripts?
+      #
+      # The different Python versions coexist without problems.
+      packages.x86_64-linux.twoPythons = pkgs.writeShellScriptBin "two-pythons" ''
+        ${lib.getExe selfPkgs.helloPython}
+        ${lib.getExe selfPkgs.helloPython36}
+      '';
+
+      # Let's put these two Python versions in a Docker image.
+      #
+      # See also: https://nix.dev/tutorials/nixos/building-and-running-docker-images.html
+      packages.x86_64-linux.helloPythonDocker = pkgs.dockerTools.buildImage {
+        name = "hello-world-image";
+
+        # No need to use a base image.
+
+        config = {
+          Cmd = [ (lib.getExe selfPkgs.twoPythons) ];
+        };
+      };
+
+      # Run the image:
+      #
+      # podman load < result
+      # podman run IMAGE_NAME
+      #
+      # Clean up _everything_:
+      # podman rmi -a -f
 
       # Let's move on to building NixOS systems. The main building
       # blocks are NixOS modules.

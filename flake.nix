@@ -1,10 +1,18 @@
+# This file is written in the Nix language. Nix is "JSON with
+# functions".
+#
+# It's a Nix "Flake", a self-contained description of software.
+# Everyone building this gets the same output.
 {
   description = "A set of Nix/NixOS capability demos";
 
   inputs = {
+    # Nixpkgs is a collection of packages ("derivations") written in Nix.
+    #
+    # How many packages are there: https://repology.org/repositories/graphs
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
-    # Demo: Lock files
+    # We use lock files to pin our dependencies.
   };
 
   outputs = { self, nixpkgs }:
@@ -15,9 +23,10 @@
       # Library functions.
       lib = nixpkgs.lib;
 
-      # Cross-compilation environments.
+      # Special-purpose environments.
       aarch64Pkgs = pkgs.pkgsCross.aarch64-multiplatform;
       riscvPkgs = pkgs.pkgsCross.riscv64;
+      staticPkgs = pkgs.pkgsStatic;
 
       # A useful shorthand for later.
       selfPkgs = self.packages.x86_64-linux;
@@ -28,7 +37,10 @@
       # See: hello/default.nix
       packages.x86_64-linux.hello = pkgs.callPackage ./hello { };
 
-      # Cross-compilation
+      # Maybe we want a static binary.
+      packages.x86_64-linux.helloStatic = staticPkgs.callPackage ./hello { };
+
+      # Cross-compilation is usually straight-forward.
       packages.aarch64-linux.hello = aarch64Pkgs.callPackage ./hello { };
       packages.riscv64-linux.hello = riscvPkgs.callPackage ./hello { };
 
@@ -48,7 +60,8 @@
         ];
       };
 
-      # Packages can be massaged via overrides.
+      # Sometimes you need to build software with different
+      # dependencies or features.
       packages.x86_64-linux.helloClang = selfPkgs.hello.override {
         # Build with clang.
         stdenv = pkgs.clangStdenv;
@@ -103,6 +116,16 @@
 
         config = {
           Cmd = [ (lib.getExe selfPkgs.twoPythons) ];
+        };
+      };
+
+      # How small can we go with our Docker image? Let's dockerize our
+      # static C hello-world from earlier.
+      packages.x86_64-linux.helloStaticDocker = pkgs.dockerTools.buildImage {
+        name = "hello-world-image";
+
+        config = {
+          Cmd = [ (lib.getExe selfPkgs.helloStatic) ];
         };
       };
 
@@ -245,5 +268,9 @@
       # There are convenient options to build CIs.
       #
       # See: https://hercules-ci.com/github/blitz/nix-demo
+
+      # We can build Linux kernel live patches.
+      #
+      # See: https://github.com/blitz/kvm-livepatch
     };
 }

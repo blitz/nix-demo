@@ -1,8 +1,26 @@
-# This file is written in the Nix language. Nix is "JSON with
-# functions".
+# Welcome to the Nix/Nixpkgs/NixOS demo!
 #
-# It's a Nix "Flake", a self-contained description of software.
-# Everyone building this gets the same output.
+# This is not meant as a tutorial. We are going through usage examples
+# to see what you can do with Nix.
+#
+# Good resources to start out with Nix are:
+# - https://zero-to-nix.com/
+# - https://nix.dev/
+# - https://nixos.org/guides/nix-pills/
+#
+# Reference documentation:
+# - https://nixos.org/learn/
+#
+# Ok. Let's go!
+#
+# ----------------------------------------------------------------------------
+#
+# This file is written in the Nix language. Nix is "JSON with
+# functions". The Nix language is used to describe how software is
+# built ("derivations").
+#
+# This file is a Nix "Flake", a self-contained description of
+# software. Everyone building this gets the same output.
 {
   description = "A set of Nix/NixOS capability demos";
 
@@ -14,6 +32,8 @@
 
     # We use lock files to pin our dependencies.
   };
+
+  # --------------------------------------------------------------------------
 
   outputs = { self, nixpkgs }:
     let
@@ -32,7 +52,7 @@
       selfPkgs = self.packages.x86_64-linux;
     in
     {
-      # Basic packaging
+      ### Basic packaging of a C application.
       #
       # See: hello/default.nix
       packages.x86_64-linux.hello = pkgs.callPackage ./hello { };
@@ -60,6 +80,8 @@
         ];
       };
 
+      # You can use the developer shell with `nix develop` or direnv.
+
       # Sometimes you need to build software with different
       # dependencies or features.
       packages.x86_64-linux.helloClang = selfPkgs.hello.override {
@@ -68,13 +90,6 @@
 
         # Use a different OpenSSL version.
         openssl = pkgs.openssl_3_3;
-      };
-
-      # Let's patch packages.
-      packages.x86_64-linux.helloPatched = selfPkgs.hello.overrideAttrs {
-        patches = [
-          ./hello/example.patch
-        ];
       };
 
       # We can massage everything from nixpkgs as well.
@@ -93,11 +108,11 @@
         openssl = selfPkgs.patchedOpenssl;
       };
 
-      # What about Python?
-      packages.x86_64-linux.helloPython = pkgs.python313Packages.callPackage ./python {};
+      ### Packaging Python
+      packages.x86_64-linux.helloPython = pkgs.python313Packages.callPackage ./python { };
 
       # We can use different Python versions as well.
-      packages.x86_64-linux.helloPython36 = pkgs.python39Packages.callPackage selfPkgs.helloPython.override {};
+      packages.x86_64-linux.helloPython36 = pkgs.python39Packages.callPackage selfPkgs.helloPython.override { };
       # What about quick'n'dirty shell scripts?
       #
       # The different Python versions coexist without problems.
@@ -106,7 +121,9 @@
         ${lib.getExe selfPkgs.helloPython36}
       '';
 
-      # Let's put these two Python versions in a Docker image.
+      ### Let's build some Docker containers.
+      #
+      # Let's put two Python versions in one Docker image.
       #
       # See also: https://nix.dev/tutorials/nixos/building-and-running-docker-images.html
       packages.x86_64-linux.helloPythonDocker = pkgs.dockerTools.buildImage {
@@ -137,8 +154,12 @@
       # Clean up _everything_:
       # podman rmi -a -f
 
+      ### Let's build NixOS systems!
+      #
       # Let's move on to building NixOS systems. The main building
       # blocks are NixOS modules.
+      #
+      # Here is a minimal example.
       modules.default = { config, lib, ... }:
         with lib;
         let
@@ -177,7 +198,7 @@
           };
         };
 
-      # NixOS tests
+      ### NixOS tests
       #
       # See nixpkgs/nixos/tests/bittorrent.nix for a more elaborate test.
       checks.x86_64-linux.default = pkgs.nixosTest {
@@ -199,9 +220,11 @@
         '';
       };
 
-      # Tests ca be interactively debugged:
+      # Tests can be interactively debugged:
       # nix -L build .#checks.x86_64-linux.default.driverInteractive
 
+      ### Patching software everywhere
+      #
       # To patch software globally in a NixOS system, we use overlays.
       checks.x86_64-linux.patched-openssl = pkgs.nixosTest {
         name = "Test whether modified kernel boots";

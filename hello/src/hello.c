@@ -15,11 +15,11 @@ int main()
     return EXIT_FAILURE;
   }
   
-  printf("Hello from %s with OpenSSL version %s and %s %s.\n",
+  printf("Hello from %s with %s and %s %s.\n",
 	 utsname.machine,
 	 OPENSSL_VERSION_TEXT,
 #ifdef __clang__
-	 "Clang",
+	 "", 			/* Not needed */
 #elif __GNUC__
 	 "GCC",
 #else

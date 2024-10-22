@@ -55,6 +55,13 @@
       ### Basic packaging of a C application.
       #
       # See: hello/default.nix
+      #
+      # Interesting points to checkout:
+      # - the derivation: nix show derivation
+      # - the Nix daemon
+      # - the sandbox
+      # - the build cache
+      # - the Nix store
       packages.x86_64-linux.hello = pkgs.callPackage ./hello { };
 
       # Maybe we want a static binary.
@@ -112,13 +119,13 @@
       packages.x86_64-linux.helloPython = pkgs.python313Packages.callPackage ./python { };
 
       # We can use different Python versions as well.
-      packages.x86_64-linux.helloPython36 = pkgs.python39Packages.callPackage selfPkgs.helloPython.override { };
+      packages.x86_64-linux.helloPython39 = pkgs.python39Packages.callPackage selfPkgs.helloPython.override { };
       # What about quick'n'dirty shell scripts?
       #
       # The different Python versions coexist without problems.
       packages.x86_64-linux.twoPythons = pkgs.writeShellScriptBin "two-pythons" ''
         ${lib.getExe selfPkgs.helloPython}
-        ${lib.getExe selfPkgs.helloPython36}
+        ${lib.getExe selfPkgs.helloPython39}
       '';
 
       ### Let's build some Docker containers.

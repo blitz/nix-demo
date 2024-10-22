@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <sys/utsname.h>
 #include <openssl/opensslv.h>
+#include <openssl/crypto.h>
 
 int main()
 {
@@ -17,7 +18,7 @@ int main()
   
   printf("Hello from %s with %s and %s %s.\n",
 	 utsname.machine,
-	 OPENSSL_VERSION_TEXT,
+	 OpenSSL_version(OPENSSL_VERSION),
 #ifdef __clang__
 	 "", 			/* Not needed */
 #elif __GNUC__

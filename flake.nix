@@ -67,6 +67,10 @@
       # Maybe we want a static binary.
       packages.x86_64-linux.helloStatic = staticPkgs.callPackage ./hello { };
 
+      # Rust packaging
+      packages.x86_64-linux.helloRust = pkgs.callPackage ./hello-rust { };
+      packages.x86_64-linux.helloRustStatic = staticPkgs.callPackage ./hello-rust { };
+
       # Cross-compilation is usually straight-forward.
       packages.aarch64-linux.hello = aarch64Pkgs.callPackage ./hello { };
       packages.riscv64-linux.hello = riscvPkgs.callPackage ./hello { };

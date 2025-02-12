@@ -151,6 +151,7 @@
       # See: https://nixos.org/manual/nixos/stable/#sec-configuration-syntax
       #
       # Real example: https://github.com/blitz/nix-configs/blob/master/modules/work-dhcp.nix
+      # Options search: https://search.nixos.org/options
       #
       # Here is a minimal example.
       modules.default = { config, lib, ... }:

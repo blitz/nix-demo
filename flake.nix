@@ -52,6 +52,20 @@
       selfPkgs = self.packages.x86_64-linux;
     in
     {
+      ### The simplest derivation
+      #
+      # This is not useful in practice, but shows some concepts:
+      #
+      # - Derivations
+      # - Build Process
+      # - Nix store
+      packages.x86_64-linux.simple = builtins.derivation {
+        name = "simple";
+        builder = "/bin/sh";
+        args = [ "-c" "echo Rebuilding. ; echo 10 > $out" ];
+        system = "x86_64-linux";
+      };
+
       ### Basic packaging of a C application.
       #
       # See: hello/default.nix

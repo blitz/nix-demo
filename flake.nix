@@ -81,17 +81,6 @@
       # Maybe we want a static binary.
       packages.x86_64-linux.helloStatic = staticPkgs.callPackage ./hello { };
 
-      # Rust packaging
-      packages.x86_64-linux.helloRust = pkgs.callPackage ./hello-rust { };
-      packages.x86_64-linux.helloRustStatic = staticPkgs.callPackage ./hello-rust { };
-
-      # Cross-compilation is usually straight-forward.
-      packages.aarch64-linux.hello = aarch64Pkgs.callPackage ./hello { };
-      packages.riscv64-linux.hello = riscvPkgs.callPackage ./hello { };
-
-      # Cross-compiling works for (almost) everything in nixpkgs.
-      packages.riscv64-linux.openssl = riscvPkgs.openssl;
-
       # Package your build and development environment with shell
       # environments.
       devShells.x86_64-linux.default = pkgs.mkShell {
@@ -133,6 +122,10 @@
         openssl = selfPkgs.patchedOpenssl;
       };
 
+      ### Packaging Rust
+      packages.x86_64-linux.helloRust = pkgs.callPackage ./hello-rust { };
+      packages.x86_64-linux.helloRustStatic = staticPkgs.callPackage ./hello-rust { };
+
       ### Packaging Python
       packages.x86_64-linux.helloPython = pkgs.python313Packages.callPackage ./python { };
 
@@ -146,43 +139,18 @@
         ${lib.getExe selfPkgs.helloPython39}
       '';
 
-      ### Let's build some Docker containers.
+      ### For more languages, check:
       #
-      # Let's put two Python versions in one Docker image.
-      #
-      # See also: https://nix.dev/tutorials/nixos/building-and-running-docker-images.html
-      packages.x86_64-linux.helloPythonDocker = pkgs.dockerTools.buildImage {
-        name = "hello-world-image";
-
-        # No need to use a base image.
-
-        config = {
-          Cmd = [ (lib.getExe selfPkgs.twoPythons) ];
-        };
-      };
-
-      # How small can we go with our Docker image? Let's dockerize our
-      # static C hello-world from earlier.
-      packages.x86_64-linux.helloStaticDocker = pkgs.dockerTools.buildImage {
-        name = "hello-world-image";
-
-        config = {
-          Cmd = [ (lib.getExe selfPkgs.helloStatic) ];
-        };
-      };
-
-      # Run the image:
-      #
-      # podman load < result
-      # podman run IMAGE_NAME
-      #
-      # Clean up _everything_:
-      # podman rmi -a -f
+      # https://nixos.org/manual/nixpkgs/stable/#chap-language-support
 
       ### Let's build NixOS systems!
       #
       # Let's move on to building NixOS systems. The main building
       # blocks are NixOS modules.
+      #
+      # See: https://nixos.org/manual/nixos/stable/#sec-configuration-syntax
+      #
+      # Real example: https://github.com/blitz/nix-configs/blob/master/modules/work-dhcp.nix
       #
       # Here is a minimal example.
       modules.default = { config, lib, ... }:
@@ -302,6 +270,10 @@
 
           # Wait until everything comes up.
           machine.wait_for_unit("multi-user.target")
+
+          # Check whether the config was applied.
+          machine.succeed("zgrep -q /proc/config.gz CONFIG_INIT_ON_ALLOC_DEFAULT_ON=y")
+          machine.succeed("zgrep -q /proc/config.gz CONFIG_INIT_ON_FREE_DEFAULT_ON=y")
         '';
       };
 
